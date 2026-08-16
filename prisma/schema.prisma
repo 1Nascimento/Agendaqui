@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PerfilConta {
+  CLIENTE
+  FUNCIONARIO
+  ADMINISTRADOR
+}
+
+model Conta {
+  id               String                    @id @default(cuid())
+  nome             String
+  email            String                    @unique
+  telefone         String
+  senhaHash        String
+  perfil           PerfilConta
+  ativo            Boolean                   @default(true)
+  emailVerificado  Boolean                   @default(false)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  sessoes          SessaoConta[]
+  tokensSenha      TokenRecuperacaoSenha[]
+
+  @@index([perfil])
+  @@index([ativo])
+}
+
+model SessaoConta {
+  id          String    @id @default(cuid())
+  contaId     String
+  tokenHash   String    @unique
+  expiraEm    DateTime
+  revogadaEm  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  conta       Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([expiraEm])
+}
+
+model TokenRecuperacaoSenha {
+  id          String    @id @default(cuid())
+  contaId     String
+  tokenHash   String    @unique
+  expiraEm    DateTime
+  utilizadoEm DateTime?
+  createdAt   DateTime  @default(now())
+
+  conta       Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([expiraEm])
+}
