@@ -1,0 +1,139 @@
+import { Prisma } from "@prisma/client";
+import { beforeEach, describe, expect, it } from "vitest";
+import { ContaAutenticada } from "@/server/domain/perfis";
+import { CriarServicoData, ServicoRecord, ServicoRepository } from "@/server/servicos/repository";
+import { criarServico, editarServico, excluirServico, listarServicosDisponiveis } from "@/server/servicos/service";
+
+class MemoryServicoRepository implements ServicoRepository {
+  servicos: ServicoRecord[] = [];
+  private idSeq = 1;
+
+  async findById(id: string) {
+    return this.servicos.find((servico) => servico.id === id) ?? null;
+  }
+
+  async findByNome(nome: string) {
+    return this.servicos.find((servico) => servico.nome === nome) ?? null;
+  }
+
+  async createServico(data: CriarServicoData) {
+    const now = new Date();
+    const servico: ServicoRecord = {
+      id: `servico_${this.idSeq++}`,
+      nome: data.nome,
+      preco: new Prisma.Decimal(data.preco),
+      descricao: null,
+      duracao: data.duracao,
+      ativo: true,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.servicos.push(servico);
+    return servico;
+  }
+
+  async updateServico(id: string, data: CriarServicoData) {
+    const servico = await this.findById(id);
+
+    if (!servico) throw new Error("Servico nao encontrado");
+
+    Object.assign(servico, {
+      ...data,
+      preco: new Prisma.Decimal(data.preco),
+      updatedAt: new Date()
+    });
+    return servico;
+  }
+
+  async deleteServico(id: string) {
+    this.servicos = this.servicos.filter((servico) => servico.id !== id);
+  }
+
+  async listServicos() {
+    return [...this.servicos].sort((a, b) => a.nome.localeCompare(b.nome));
+  }
+
+  async listServicosDisponiveis() {
+    return (await this.listServicos()).filter((servico) => servico.ativo);
+  }
+}
+
+const administrador: ContaAutenticada = {
+  id: "admin_1",
+  nome: "Administrador",
+  email: "admin@example.com",
+  perfil: "ADMINISTRADOR",
+  ativo: true
+};
+
+const cliente: ContaAutenticada = { ...administrador, id: "cliente_1", perfil: "CLIENTE" };
+const servicoBase = { nome: "Corte de cabelo", preco: "45,50", duracao: "45" };
+
+describe("Modulo 2 - gerenciamento de servicos", () => {
+  let repo: MemoryServicoRepository;
+
+  beforeEach(() => {
+    repo = new MemoryServicoRepository();
+  });
+
+  it("permite Administrador cadastrar servico com preco e duracao", async () => {
+    await expect(criarServico(administrador, servicoBase, repo)).resolves.toMatchObject({
+      nome: "Corte de cabelo",
+      preco: "45.50",
+      duracao: 45
+    });
+  });
+
+  it("rejeita cadastro de servico por perfil sem permissao", async () => {
+    await expect(criarServico(cliente, servicoBase, repo)).rejects.toMatchObject({ code: "ACESSO_NEGADO" });
+  });
+
+  it("valida nome, preco e duracao", async () => {
+    await expect(criarServico(administrador, { ...servicoBase, nome: " " }, repo)).rejects.toMatchObject({ code: "NOME_SERVICO_OBRIGATORIO" });
+    await expect(criarServico(administrador, { ...servicoBase, preco: "0" }, repo)).rejects.toMatchObject({ code: "PRECO_INVALIDO" });
+    await expect(criarServico(administrador, { ...servicoBase, duracao: "0" }, repo)).rejects.toMatchObject({ code: "DURACAO_INVALIDA" });
+  });
+
+  it("rejeita nomes de servico duplicados", async () => {
+    await criarServico(administrador, servicoBase, repo);
+
+    await expect(criarServico(administrador, servicoBase, repo)).rejects.toMatchObject({ code: "SERVICO_DUPLICADO" });
+  });
+
+  it("permite editar um servico", async () => {
+    const criado = await criarServico(administrador, servicoBase, repo);
+
+    await expect(editarServico(administrador, criado.id, { nome: "Corte premium", preco: "60", duracao: "60" }, repo)).resolves.toMatchObject({
+      nome: "Corte premium",
+      preco: "60.00",
+      duracao: 60
+    });
+  });
+
+  it("permite excluir um servico", async () => {
+    const criado = await criarServico(administrador, servicoBase, repo);
+
+    await expect(excluirServico(administrador, criado.id, repo)).resolves.toBeUndefined();
+    await expect(listarServicosDisponiveis(repo)).resolves.toEqual([]);
+  });
+
+  it("lista servicos em ordem alfabetica", async () => {
+    await criarServico(administrador, { nome: "Barba", preco: "30", duracao: "30" }, repo);
+    await criarServico(administrador, servicoBase, repo);
+
+    await expect(listarServicosDisponiveis(repo)).resolves.toMatchObject([
+      { nome: "Barba" },
+      { nome: "Corte de cabelo" }
+    ]);
+  });
+
+  it("lista como disponiveis apenas servicos ativos", async () => {
+    const criado = await criarServico(administrador, servicoBase, repo);
+    const servico = await repo.findById(criado.id);
+
+    if (servico) servico.ativo = false;
+
+    await expect(listarServicosDisponiveis(repo)).resolves.toEqual([]);
+  });
+});

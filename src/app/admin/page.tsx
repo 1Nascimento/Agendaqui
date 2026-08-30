@@ -34,6 +34,7 @@ export default async function AdminPage() {
         </div>
         <div className="actions block-gap">
           <Link className="button" href="/admin/contas">Contas</Link>
+          <Link className="button" href="/admin/servicos">Servicos</Link>
           <Link className="button secondary" href="/admin/funcionarios/novo">Novo Funcionário</Link>
           <Link className="button secondary" href="/admin/administradores/novo">Novo Administrador</Link>
         </div>

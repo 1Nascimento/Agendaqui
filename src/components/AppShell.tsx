@@ -13,6 +13,7 @@ export function AppShell({ conta, active, children }: AppShellProps) {
     conta.perfil === "CLIENTE" ? { href: "/cliente", label: "Área do Cliente", key: "cliente" } : null,
     conta.perfil === "FUNCIONARIO" ? { href: "/funcionario", label: "Área do Funcionário", key: "funcionario" } : null,
     conta.perfil === "ADMINISTRADOR" ? { href: "/admin", label: "Administração", key: "admin" } : null,
+    { href: "/servicos", label: "Servicos", key: "servicos" },
     { href: "/minha-conta", label: "Minha conta", key: "minha-conta" }
   ].filter(Boolean) as Array<{ href: string; label: string; key: string }>;
 
