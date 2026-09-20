@@ -1,11 +1,13 @@
 type CadastroContaFormProps = {
   action: (formData: FormData) => void | Promise<void>;
   submitLabel: string;
+  children?: React.ReactNode;
 };
 
-export function CadastroContaForm({ action, submitLabel }: CadastroContaFormProps) {
+export function CadastroContaForm({ action, submitLabel, children }: CadastroContaFormProps) {
   return (
     <form className="form" action={action}>
+      {children}
       <div className="grid-two">
         <div className="field">
           <label htmlFor="nome">Nome</label>

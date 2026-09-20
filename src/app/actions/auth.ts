@@ -7,6 +7,9 @@ import { criarEnviadorRecuperacaoSenha } from "@/server/email/recuperacao-senha"
 import { campo, mensagemErroForm, urlComMensagem } from "@/server/http/form";
 import { gravarSessaoCookie, encerrarSessaoAtual } from "@/server/auth/session-cookie";
 import { rotaInicialPorPerfil } from "@/server/domain/perfis";
+import { prismaEmpresaRepository } from "@/server/empresas/prisma-repository";
+import { cadastrarEmpresa } from "@/server/empresas/service";
+import { EMPRESA_PADRAO_SLUG } from "@/server/empresas/contexto";
 
 function appUrl() {
   return process.env.APP_URL || "http://localhost:3000";
@@ -51,22 +54,35 @@ export async function logoutAction() {
 }
 
 export async function cadastrarClienteAction(formData: FormData) {
+  const empresaSlug = campo(formData, "empresaSlug") || EMPRESA_PADRAO_SLUG;
   try {
     await cadastrarClientePublico(
       {
         nome: campo(formData, "nome"),
+        empresaSlug,
         telefone: campo(formData, "telefone"),
         email: campo(formData, "email"),
         senha: campo(formData, "senha"),
         confirmarSenha: campo(formData, "confirmarSenha")
       },
-      prismaContaRepository
+      prismaContaRepository,
+      prismaEmpresaRepository
     );
   } catch (error) {
-    redirect(urlComMensagem("/cadastro", "erro", mensagemErroForm(error)));
+    const params = new URLSearchParams({ empresa: empresaSlug, erro: mensagemErroForm(error) });
+    redirect(`/cadastro?${params.toString()}`);
   }
 
   redirect("/login?sucesso=Conta de Cliente criada. Entre com seu e-mail e senha.");
+}
+
+export async function cadastrarEmpresaAction(formData: FormData) {
+  try {
+    await cadastrarEmpresa({ nomeEmpresa: campo(formData, "nomeEmpresa"), nome: campo(formData, "nome"), telefone: campo(formData, "telefone"), email: campo(formData, "email"), senha: campo(formData, "senha"), confirmarSenha: campo(formData, "confirmarSenha") }, prismaEmpresaRepository);
+  } catch (error) {
+    redirect(urlComMensagem("/cadastro-empresa", "erro", mensagemErroForm(error)));
+  }
+  redirect("/login?sucesso=Empresa+e+administrador+cadastrados.+Entre+com+seu+e-mail+e+senha.");
 }
 
 export async function solicitarRecuperacaoSenhaAction(formData: FormData) {

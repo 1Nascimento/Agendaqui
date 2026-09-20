@@ -5,7 +5,7 @@ import { PerfilConta, rotaInicialPorPerfil } from "@/server/domain/perfis";
 export async function exigirConta() {
   const conta = await obterContaAtual();
 
-  if (!conta) {
+  if (!conta || !conta.ativo || !conta.empresaId || conta.empresa?.id !== conta.empresaId) {
     redirect("/login");
   }
 

@@ -33,10 +33,16 @@ export default async function AdminPage() {
           </Link>
         </div>
         <div className="actions block-gap">
+          <Link className="button" href="/agendamentos">Agendamentos</Link>
           <Link className="button" href="/admin/contas">Contas</Link>
           <Link className="button" href="/admin/servicos">Servicos</Link>
           <Link className="button secondary" href="/admin/funcionarios/novo">Novo Funcionário</Link>
           <Link className="button secondary" href="/admin/administradores/novo">Novo Administrador</Link>
+        </div>
+        <div className="field block-gap">
+          <label htmlFor="linkCadastro">Link de cadastro para os clientes da sua empresa</label>
+          <input id="linkCadastro" readOnly value={new URL(`/cadastro?empresa=${encodeURIComponent(conta.empresa.slug)}`, process.env.APP_URL || "http://localhost:3000").toString()} />
+          <p className="muted">Copie este endereço e compartilhe com seus clientes.</p>
         </div>
       </section>
     </AppShell>

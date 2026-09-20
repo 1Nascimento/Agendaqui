@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 export type ServicoRecord = {
+  empresaId: string;
   id: string;
   nome: string;
   descricao: string | null;
@@ -12,17 +13,18 @@ export type ServicoRecord = {
 };
 
 export type CriarServicoData = {
+  empresaId: string;
   nome: string;
   preco: string;
   duracao: number;
 };
 
 export interface ServicoRepository {
-  findById(id: string): Promise<ServicoRecord | null>;
-  findByNome(nome: string): Promise<ServicoRecord | null>;
+  findById(id: string, empresaId: string): Promise<ServicoRecord | null>;
+  findByNome(nome: string, empresaId: string): Promise<ServicoRecord | null>;
   createServico(data: CriarServicoData): Promise<ServicoRecord>;
-  updateServico(id: string, data: CriarServicoData): Promise<ServicoRecord>;
-  deleteServico(id: string): Promise<void>;
-  listServicos(): Promise<ServicoRecord[]>;
-  listServicosDisponiveis(): Promise<ServicoRecord[]>;
+  updateServico(id: string, data: Omit<CriarServicoData, "empresaId">, empresaId: string): Promise<ServicoRecord>;
+  deleteServico(id: string, empresaId: string): Promise<void>;
+  listServicos(empresaId: string): Promise<ServicoRecord[]>;
+  listServicosDisponiveis(empresaId: string): Promise<ServicoRecord[]>;
 }

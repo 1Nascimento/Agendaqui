@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ServicosTable } from "@/components/servicos/ServicosTable";
 import { exigirConta } from "@/server/auth/guards";
@@ -6,13 +7,14 @@ import { listarServicosDisponiveis } from "@/server/servicos/service";
 
 export default async function ServicosPage() {
   const conta = await exigirConta();
-  const servicos = await listarServicosDisponiveis(prismaServicoRepository);
+  const servicos = await listarServicosDisponiveis(conta, prismaServicoRepository);
 
   return (
     <AppShell conta={conta} active="servicos">
       <section className="panel">
         <div className="section-title"><h2>Servicos disponiveis</h2><p>Consulte os atendimentos, precos e duracoes disponiveis.</p></div>
         <div className="block-gap"><ServicosTable servicos={servicos} /></div>
+        <div className="actions block-gap"><Link className="button" href="/agendamentos/novo">Agendar atendimento</Link></div>
       </section>
     </AppShell>
   );

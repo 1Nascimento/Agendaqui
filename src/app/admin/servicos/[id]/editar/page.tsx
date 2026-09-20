@@ -12,7 +12,7 @@ export default async function EditarServicoPage({ params, searchParams }: Editar
   const ator = await exigirPerfil(["ADMINISTRADOR"]);
   const { id } = await params;
   const query = await searchParams;
-  const servico = await prismaServicoRepository.findById(id);
+  const servico = await prismaServicoRepository.findById(id, ator.empresaId);
 
   if (!servico) redirect("/admin/servicos?erro=Servico nao encontrado.");
 

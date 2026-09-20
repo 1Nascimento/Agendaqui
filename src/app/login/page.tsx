@@ -36,6 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <div className="links">
           <Link href="/esqueci-senha">Esqueceu a senha?</Link>
           <Link href="/cadastro">Cadastre-se</Link>
+          <Link href="/cadastro-empresa">Cadastrar empresa</Link>
         </div>
       </section>
     </main>

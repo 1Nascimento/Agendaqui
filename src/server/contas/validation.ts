@@ -2,6 +2,7 @@ import { AgendaquiError } from "@/server/domain/errors";
 import { PerfilConta } from "@/server/domain/perfis";
 
 export type CadastroContaInput = {
+  empresaSlug?: unknown;
   nome?: unknown;
   telefone?: unknown;
   email?: unknown;

@@ -20,7 +20,7 @@ export default async function EditarContaPage({ params, searchParams }: EditarCo
   const ator = await exigirPerfil(["ADMINISTRADOR"]);
   const { id } = await params;
   const query = await searchParams;
-  const conta = await prismaContaRepository.findById(id);
+  const conta = await prismaContaRepository.findById(id, ator.empresaId);
 
   if (!conta) {
     redirect("/admin/contas?erro=Conta nao encontrada.");

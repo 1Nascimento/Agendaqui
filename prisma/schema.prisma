@@ -13,7 +13,21 @@ enum PerfilConta {
   ADMINISTRADOR
 }
 
+model Empresa {
+  id           String @id @default(cuid())
+  nome         String
+  slug         String @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  contas       Conta[]
+  servicos     Servico[]
+  agendamentos Agendamento[]
+  expedientes  ExpedienteFuncionario[]
+}
+
 model Conta {
+  empresaId        String
+  empresa          Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   id               String                    @id @default(cuid())
   nome             String
   email            String                    @unique
@@ -27,9 +41,15 @@ model Conta {
 
   sessoes          SessaoConta[]
   tokensSenha      TokenRecuperacaoSenha[]
+  agendamentosCliente Agendamento[] @relation("ClienteAgendamento")
+  agendamentosFuncionario Agendamento[] @relation("FuncionarioAgendamento")
+  eventosAgendamento EventoAgendamento[]
+  expedientes ExpedienteFuncionario[]
 
   @@index([perfil])
   @@index([ativo])
+  @@unique([id, empresaId])
+  @@index([empresaId, perfil, ativo])
 }
 
 model SessaoConta {
@@ -62,6 +82,8 @@ model TokenRecuperacaoSenha {
 }
 
 model Servico {
+  empresaId String
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   id        String   @id @default(cuid())
   nome      String
   descricao String?
@@ -70,6 +92,87 @@ model Servico {
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  agendamentos AgendamentoServico[]
 
   @@index([ativo])
+  @@index([empresaId, ativo])
+}
+
+enum StatusAgendamento {
+  CONFIRMADO
+  CANCELADO
+}
+
+model ExpedienteFuncionario {
+  empresaId     String
+  empresa       Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  id            String @id @default(cuid())
+  funcionarioId String
+  diaSemana     Int
+  inicioMinuto  Int
+  fimMinuto     Int
+  funcionario   Conta @relation(fields: [funcionarioId, empresaId], references: [id, empresaId], onDelete: Cascade, onUpdate: Restrict)
+
+  @@unique([funcionarioId, diaSemana])
+  @@index([empresaId, funcionarioId])
+}
+
+enum TipoEventoAgendamento {
+  CONFIRMADO
+  REMARCADO
+  CANCELADO
+}
+
+model Agendamento {
+  empresaId     String
+  empresa       Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  id            String @id @default(cuid())
+  clienteId     String
+  funcionarioId String
+  inicio        DateTime
+  fim           DateTime
+  status        StatusAgendamento @default(CONFIRMADO)
+  versao        Int @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  cliente       Conta @relation("ClienteAgendamento", fields: [clienteId, empresaId], references: [id, empresaId], onDelete: Restrict, onUpdate: Restrict)
+  funcionario   Conta @relation("FuncionarioAgendamento", fields: [funcionarioId, empresaId], references: [id, empresaId], onDelete: Restrict, onUpdate: Restrict)
+  servicos      AgendamentoServico[]
+  eventos       EventoAgendamento[]
+
+  @@index([funcionarioId, status, inicio, fim])
+  @@index([clienteId, status, inicio, fim])
+  @@index([empresaId, status, inicio])
+}
+
+// Cópias do nome, preço e duração preservam as condições da confirmação.
+model AgendamentoServico {
+  id            String @id @default(cuid())
+  agendamentoId String
+  servicoId     String?
+  nome          String
+  preco         Decimal @db.Decimal(10, 2)
+  duracao       Int
+  agendamento   Agendamento @relation(fields: [agendamentoId], references: [id], onDelete: Cascade)
+  servico       Servico? @relation(fields: [servicoId], references: [id], onDelete: SetNull)
+
+  @@index([agendamentoId])
+  @@index([servicoId])
+}
+
+model EventoAgendamento {
+  id             String @id @default(cuid())
+  agendamentoId  String
+  atorId         String
+  tipo           TipoEventoAgendamento
+  inicio         DateTime
+  fim            DateTime
+  inicioAnterior DateTime?
+  fimAnterior    DateTime?
+  createdAt      DateTime @default(now())
+  agendamento    Agendamento @relation(fields: [agendamentoId], references: [id], onDelete: Cascade)
+  ator           Conta @relation(fields: [atorId], references: [id], onDelete: Restrict)
+
+  @@index([agendamentoId, createdAt])
+  @@index([atorId])
 }

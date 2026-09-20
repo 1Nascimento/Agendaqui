@@ -1,8 +1,12 @@
+import type { EmpresaResumo } from "@/server/empresas/contexto";
+
 export const PERFIS_CONTA = ["CLIENTE", "FUNCIONARIO", "ADMINISTRADOR"] as const;
 
 export type PerfilConta = (typeof PERFIS_CONTA)[number];
 
 export type ContaPublica = {
+  empresaId: string;
+  empresa: EmpresaResumo;
   id: string;
   nome: string;
   email: string;
@@ -14,7 +18,7 @@ export type ContaPublica = {
   updatedAt: Date;
 };
 
-export type ContaAutenticada = Pick<ContaPublica, "id" | "nome" | "email" | "perfil" | "ativo">;
+export type ContaAutenticada = Pick<ContaPublica, "id" | "nome" | "email" | "perfil" | "ativo" | "empresaId">;
 
 export function perfilLabel(perfil: PerfilConta) {
   const labels: Record<PerfilConta, string> = {

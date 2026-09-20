@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { alterarStatusConta, autenticarConta, cadastrarClientePublico, criarContaPorAdministrador, listarContas, redefinirSenha, solicitarRecuperacaoSenha } from "@/server/contas/service";
+import { alterarStatusConta, autenticarConta, cadastrarClientePublico, criarContaPorAdministrador, editarConta, listarContas, obterContaPorSessao, redefinirSenha, solicitarRecuperacaoSenha } from "@/server/contas/service";
+import type { EmpresaRepository } from "@/server/empresas/repository";
+
+const empresaPadrao = { id: "empresa_padrao", nome: "Empresa Principal", slug: "barbearia-principal" };
+const empresas: EmpresaRepository = {
+  async findBySlug(slug) { return slug === empresaPadrao.slug ? empresaPadrao : null; },
+  async createComAdministrador() { throw new Error("Não utilizado neste teste"); }
+};
 import { hashPassword } from "@/server/security/password";
 import { ContaRecord, ContaRepository, CriarContaData, SessaoComContaRecord, SessaoRecord, TokenRecuperacaoComContaRecord, TokenRecuperacaoSenhaRecord } from "@/server/contas/repository";
 import { ContaAutenticada, PerfilConta } from "@/server/domain/perfis";
@@ -14,13 +21,15 @@ class MemoryContaRepository implements ContaRepository {
     return this.contas.find((conta) => conta.email === email) ?? null;
   }
 
-  async findById(id: string) {
-    return this.contas.find((conta) => conta.id === id) ?? null;
+  async findById(id: string, empresaId: string) {
+    return this.contas.find((conta) => conta.id === id && conta.empresaId === empresaId) ?? null;
   }
 
   async createConta(data: CriarContaData) {
     const now = new Date();
     const conta: ContaRecord = {
+      empresaId: data.empresaId,
+      empresa: { ...empresaPadrao, id: data.empresaId },
       id: `conta_${this.idSeq++}`,
       nome: data.nome,
       telefone: data.telefone,
@@ -37,8 +46,8 @@ class MemoryContaRepository implements ContaRepository {
     return conta;
   }
 
-  async updateConta(id: string, data: Partial<Pick<ContaRecord, "nome" | "telefone" | "email" | "ativo" | "senhaHash">>) {
-    const conta = await this.findById(id);
+  async updateConta(id: string, data: Partial<Pick<ContaRecord, "nome" | "telefone" | "email" | "ativo" | "senhaHash">>, empresaId: string) {
+    const conta = await this.findById(id, empresaId);
 
     if (!conta) {
       throw new Error("Conta nao encontrada");
@@ -48,12 +57,12 @@ class MemoryContaRepository implements ContaRepository {
     return conta;
   }
 
-  async listContas(filtro?: { perfil?: PerfilConta }) {
-    return this.contas.filter((conta) => !filtro?.perfil || conta.perfil === filtro.perfil);
+  async listContas(filtro: { empresaId: string; perfil?: PerfilConta }) {
+    return this.contas.filter((conta) => conta.empresaId === filtro.empresaId && (!filtro.perfil || conta.perfil === filtro.perfil));
   }
 
-  async countActiveByPerfil(perfil: PerfilConta) {
-    return this.contas.filter((conta) => conta.perfil === perfil && conta.ativo).length;
+  async countActiveByPerfil(perfil: PerfilConta, empresaId: string) {
+    return this.contas.filter((conta) => conta.empresaId === empresaId && conta.perfil === perfil && conta.ativo).length;
   }
 
   async createSessao(data: { contaId: string; tokenHash: string; expiraEm: Date }) {
@@ -79,7 +88,7 @@ class MemoryContaRepository implements ContaRepository {
       return null;
     }
 
-    const conta = await this.findById(sessao.contaId);
+    const conta = this.contas.find((c) => c.id === sessao.contaId);
 
     if (!conta) {
       return null;
@@ -96,7 +105,8 @@ class MemoryContaRepository implements ContaRepository {
     }
   }
 
-  async revokeSessoesByContaId(contaId: string, revogadaEm: Date) {
+  async revokeSessoesByContaId(contaId: string, revogadaEm: Date, empresaId: string) {
+    if (!await this.findById(contaId, empresaId)) return;
     for (const sessao of this.sessoes) {
       if (sessao.contaId === contaId && !sessao.revogadaEm) {
         sessao.revogadaEm = revogadaEm;
@@ -125,7 +135,7 @@ class MemoryContaRepository implements ContaRepository {
       return null;
     }
 
-    const conta = await this.findById(token.contaId);
+    const conta = this.contas.find((c) => c.id === token.contaId);
 
     if (!conta) {
       return null;
@@ -153,6 +163,7 @@ const cadastroBase = {
 
 async function criarConta(repo: MemoryContaRepository, perfil: PerfilConta, overrides: Partial<CriarContaData> = {}) {
   return repo.createConta({
+    empresaId: overrides.empresaId ?? empresaPadrao.id,
     nome: overrides.nome ?? `${perfil} Teste`,
     telefone: overrides.telefone ?? "65999999999",
     email: overrides.email ?? `${perfil.toLowerCase()}@example.com`,
@@ -166,6 +177,7 @@ async function criarConta(repo: MemoryContaRepository, perfil: PerfilConta, over
 function ator(conta: ContaRecord): ContaAutenticada {
   return {
     id: conta.id,
+    empresaId: conta.empresaId,
     nome: conta.nome,
     email: conta.email,
     perfil: conta.perfil,
@@ -185,7 +197,7 @@ describe("Modulo 1 - cadastro de Cliente", () => {
   });
 
   it("permite criar Cliente com perfil CLIENTE e sem retornar senhaHash", async () => {
-    const conta = await cadastrarClientePublico(cadastroBase, repo);
+    const conta = await cadastrarClientePublico(cadastroBase, repo, empresas);
 
     expect(conta.perfil).toBe("CLIENTE");
     expect(conta.email).toBe("maria@example.com");
@@ -194,27 +206,27 @@ describe("Modulo 1 - cadastro de Cliente", () => {
 
   it("ignora perfil adulterado no cadastro publico", async () => {
     const inputAdulterado = { ...cadastroBase, perfil: "ADMINISTRADOR" };
-    const conta = await cadastrarClientePublico(inputAdulterado, repo);
+    const conta = await cadastrarClientePublico(inputAdulterado, repo, empresas);
 
     expect(conta.perfil).toBe("CLIENTE");
   });
 
   it("rejeita e-mail duplicado", async () => {
-    await cadastrarClientePublico(cadastroBase, repo);
+    await cadastrarClientePublico(cadastroBase, repo, empresas);
 
-    await expect(cadastrarClientePublico(cadastroBase, repo)).rejects.toMatchObject({
+    await expect(cadastrarClientePublico(cadastroBase, repo, empresas)).rejects.toMatchObject({
       code: "EMAIL_DUPLICADO"
     });
   });
 
   it("rejeita senhas diferentes", async () => {
-    await expect(cadastrarClientePublico({ ...cadastroBase, confirmarSenha: "OutraSenha1" }, repo)).rejects.toMatchObject({
+    await expect(cadastrarClientePublico({ ...cadastroBase, confirmarSenha: "OutraSenha1" }, repo, empresas)).rejects.toMatchObject({
       code: "SENHAS_DIFERENTES"
     });
   });
 
   it("valida campos obrigatorios", async () => {
-    await expect(cadastrarClientePublico({ ...cadastroBase, nome: "   " }, repo)).rejects.toMatchObject({
+    await expect(cadastrarClientePublico({ ...cadastroBase, nome: "   " }, repo, empresas)).rejects.toMatchObject({
       code: "NOME_OBRIGATORIO"
     });
   });
@@ -357,5 +369,47 @@ describe("Modulo 1 - desativacao", () => {
 
     await expect(alterarStatusConta(ator(admin), cliente.id, false, repo)).resolves.toMatchObject({ ativo: false });
     await expect(autenticarConta({ email: "cliente@example.com", senha: "SenhaForte1" }, repo)).rejects.toMatchObject({ code: "CONTA_INATIVA" });
+  });
+});
+
+describe("Contas por empresa", () => {
+  it("administrador lista somente contas da própria empresa", async () => {
+    const repo = new MemoryContaRepository();
+    const admin = await criarConta(repo, "ADMINISTRADOR");
+    const cliente = await criarConta(repo, "CLIENTE");
+    await criarConta(repo, "ADMINISTRADOR", { empresaId: "outra", email: "admin-outra@example.com" });
+    expect((await listarContas(ator(admin), repo)).map((c) => c.id)).toEqual([admin.id, cliente.id]);
+  });
+  it("não permite editar nem desativar uma conta de outra empresa", async () => {
+    const repo = new MemoryContaRepository();
+    const admin = await criarConta(repo, "ADMINISTRADOR");
+    const outro = await criarConta(repo, "CLIENTE", { empresaId: "outra" });
+    await expect(editarConta(ator(admin), outro.id, cadastroBase, repo)).rejects.toMatchObject({ code: "CONTA_NAO_ENCONTRADA" });
+    await expect(alterarStatusConta(ator(admin), outro.id, false, repo)).rejects.toMatchObject({ code: "CONTA_NAO_ENCONTRADA" });
+    expect(outro.ativo).toBe(true);
+  });
+  it("cadastro administrativo não aceita empresa enviada pelo formulário", async () => {
+    const repo = new MemoryContaRepository();
+    const admin = await criarConta(repo, "ADMINISTRADOR");
+    const adulterado = { ...cadastroBase, empresaId: "outra", empresaSlug: "outra" };
+    await expect(criarContaPorAdministrador(ator(admin), "FUNCIONARIO", adulterado, repo)).resolves.toMatchObject({ empresaId: admin.empresaId });
+  });
+  it("cadastro legado e sessão continuam associados à empresa padrão", async () => {
+    const repo = new MemoryContaRepository();
+    const conta = await cadastrarClientePublico(cadastroBase, repo, empresas);
+    expect(conta.empresaId).toBe(empresaPadrao.id);
+    const login = await autenticarConta(cadastroBase, repo);
+    await expect(obterContaPorSessao(login.sessao.id, login.sessao.token, repo)).resolves.toMatchObject({ empresaId: empresaPadrao.id, empresa: empresaPadrao });
+  });
+  it("rejeita link de empresa inexistente sem criar cliente", async () => {
+    const repo = new MemoryContaRepository();
+    await expect(cadastrarClientePublico({ ...cadastroBase, empresaSlug: "inexistente" }, repo, empresas)).rejects.toMatchObject({ code: "EMPRESA_NAO_ENCONTRADA" });
+    expect(repo.contas).toHaveLength(0);
+  });
+  it("contagem de administradores ativos é restrita à empresa", async () => {
+    const repo = new MemoryContaRepository();
+    await criarConta(repo, "ADMINISTRADOR");
+    await criarConta(repo, "ADMINISTRADOR", { empresaId: "outra", email: "outro-admin@example.com" });
+    expect(await repo.countActiveByPerfil("ADMINISTRADOR", empresaPadrao.id)).toBe(1);
   });
 });

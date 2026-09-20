@@ -36,9 +36,22 @@ async function main() {
 
   const contaExistente = await prisma.conta.findUnique({ where: { email } });
 
+  const empresa = await prisma.empresa.upsert({
+    where: { slug: "barbearia-principal" },
+    create: { id: "empresa_padrao", nome: "Empresa Principal", slug: "barbearia-principal" },
+    update: {}
+  });
+
+  // Atualiza apenas o nome inicial legado, preservando nomes personalizados e links.
+  await prisma.empresa.updateMany({
+    where: { id: "empresa_padrao", slug: "barbearia-principal", nome: "Barbearia Principal" },
+    data: { nome: "Empresa Principal" }
+  });
+
   if (contaExistente) {
+    if (contaExistente.empresaId !== empresa.id) throw new Error("O e-mail do seed pertence a outra empresa. Nenhuma conta foi alterada.");
     await prisma.conta.update({
-      where: { id: contaExistente.id },
+      where: { id: contaExistente.id, empresaId: empresa.id },
       data: {
         nome,
         telefone,
@@ -54,6 +67,7 @@ async function main() {
 
   await prisma.conta.create({
     data: {
+      empresaId: empresa.id,
       nome,
       email,
       telefone,
