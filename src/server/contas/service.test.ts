@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { alterarStatusConta, autenticarConta, cadastrarClientePublico, criarContaPorAdministrador, editarConta, listarContas, obterContaPorSessao, redefinirSenha, solicitarRecuperacaoSenha } from "@/server/contas/service";
-import type { EmpresaRepository } from "@/server/empresas/repository";
-
 const empresaPadrao = { id: "empresa_padrao", nome: "Empresa Principal", slug: "barbearia-principal" };
-const empresas: EmpresaRepository = {
-  async findBySlug(slug) { return slug === empresaPadrao.slug ? empresaPadrao : null; },
-  async createComAdministrador() { throw new Error("Não utilizado neste teste"); }
-};
 import { hashPassword } from "@/server/security/password";
 import { ContaRecord, ContaRepository, CriarContaData, SessaoComContaRecord, SessaoRecord, TokenRecuperacaoComContaRecord, TokenRecuperacaoSenhaRecord } from "@/server/contas/repository";
 import { ContaAutenticada, PerfilConta } from "@/server/domain/perfis";
@@ -21,7 +15,7 @@ class MemoryContaRepository implements ContaRepository {
     return this.contas.find((conta) => conta.email === email) ?? null;
   }
 
-  async findById(id: string, empresaId: string) {
+  async findById(id: string, empresaId: string | null) {
     return this.contas.find((conta) => conta.id === id && conta.empresaId === empresaId) ?? null;
   }
 
@@ -29,7 +23,7 @@ class MemoryContaRepository implements ContaRepository {
     const now = new Date();
     const conta: ContaRecord = {
       empresaId: data.empresaId,
-      empresa: { ...empresaPadrao, id: data.empresaId },
+      empresa: data.empresaId ? { ...empresaPadrao, id: data.empresaId } : null,
       id: `conta_${this.idSeq++}`,
       nome: data.nome,
       telefone: data.telefone,
@@ -46,7 +40,7 @@ class MemoryContaRepository implements ContaRepository {
     return conta;
   }
 
-  async updateConta(id: string, data: Partial<Pick<ContaRecord, "nome" | "telefone" | "email" | "ativo" | "senhaHash">>, empresaId: string) {
+  async updateConta(id: string, data: Partial<Pick<ContaRecord, "nome" | "telefone" | "email" | "ativo" | "senhaHash">>, empresaId: string | null) {
     const conta = await this.findById(id, empresaId);
 
     if (!conta) {
@@ -61,7 +55,7 @@ class MemoryContaRepository implements ContaRepository {
     return this.contas.filter((conta) => conta.empresaId === filtro.empresaId && (!filtro.perfil || conta.perfil === filtro.perfil));
   }
 
-  async countActiveByPerfil(perfil: PerfilConta, empresaId: string) {
+  async countActiveByPerfil(perfil: PerfilConta, empresaId: string | null) {
     return this.contas.filter((conta) => conta.empresaId === empresaId && conta.perfil === perfil && conta.ativo).length;
   }
 
@@ -105,7 +99,7 @@ class MemoryContaRepository implements ContaRepository {
     }
   }
 
-  async revokeSessoesByContaId(contaId: string, revogadaEm: Date, empresaId: string) {
+  async revokeSessoesByContaId(contaId: string, revogadaEm: Date, empresaId: string | null) {
     if (!await this.findById(contaId, empresaId)) return;
     for (const sessao of this.sessoes) {
       if (sessao.contaId === contaId && !sessao.revogadaEm) {
@@ -144,12 +138,14 @@ class MemoryContaRepository implements ContaRepository {
     return { ...token, conta };
   }
 
-  async marcarTokenRecuperacaoSenhaUtilizado(id: string, utilizadoEm: Date) {
+  async redefinirSenhaAtomica(id: string, senhaHash: string, utilizadoEm: Date) {
     const token = this.tokens.find((item) => item.id === id);
-
-    if (token) {
-      token.utilizadoEm = utilizadoEm;
-    }
+    const conta = token && this.contas.find((c) => c.id === token.contaId);
+    if (!token || token.utilizadoEm || token.expiraEm <= utilizadoEm || !conta?.ativo) return false;
+    conta.senhaHash = senhaHash;
+    for (const item of this.tokens) if (item.contaId === conta.id && !item.utilizadoEm) item.utilizadoEm = utilizadoEm;
+    for (const item of this.sessoes) if (item.contaId === conta.id && !item.revogadaEm) item.revogadaEm = utilizadoEm;
+    return true;
   }
 }
 
@@ -197,7 +193,7 @@ describe("Modulo 1 - cadastro de Cliente", () => {
   });
 
   it("permite criar Cliente com perfil CLIENTE e sem retornar senhaHash", async () => {
-    const conta = await cadastrarClientePublico(cadastroBase, repo, empresas);
+    const conta = await cadastrarClientePublico(cadastroBase, repo);
 
     expect(conta.perfil).toBe("CLIENTE");
     expect(conta.email).toBe("maria@example.com");
@@ -206,27 +202,27 @@ describe("Modulo 1 - cadastro de Cliente", () => {
 
   it("ignora perfil adulterado no cadastro publico", async () => {
     const inputAdulterado = { ...cadastroBase, perfil: "ADMINISTRADOR" };
-    const conta = await cadastrarClientePublico(inputAdulterado, repo, empresas);
+    const conta = await cadastrarClientePublico(inputAdulterado, repo);
 
     expect(conta.perfil).toBe("CLIENTE");
   });
 
   it("rejeita e-mail duplicado", async () => {
-    await cadastrarClientePublico(cadastroBase, repo, empresas);
+    await cadastrarClientePublico(cadastroBase, repo);
 
-    await expect(cadastrarClientePublico(cadastroBase, repo, empresas)).rejects.toMatchObject({
+    await expect(cadastrarClientePublico(cadastroBase, repo)).rejects.toMatchObject({
       code: "EMAIL_DUPLICADO"
     });
   });
 
   it("rejeita senhas diferentes", async () => {
-    await expect(cadastrarClientePublico({ ...cadastroBase, confirmarSenha: "OutraSenha1" }, repo, empresas)).rejects.toMatchObject({
+    await expect(cadastrarClientePublico({ ...cadastroBase, confirmarSenha: "OutraSenha1" }, repo)).rejects.toMatchObject({
       code: "SENHAS_DIFERENTES"
     });
   });
 
   it("valida campos obrigatorios", async () => {
-    await expect(cadastrarClientePublico({ ...cadastroBase, nome: "   " }, repo, empresas)).rejects.toMatchObject({
+    await expect(cadastrarClientePublico({ ...cadastroBase, nome: "   " }, repo)).rejects.toMatchObject({
       code: "NOME_OBRIGATORIO"
     });
   });
@@ -365,7 +361,7 @@ describe("Modulo 1 - desativacao", () => {
 
   it("permite Administrador desativar conta e bloqueia novo login", async () => {
     const admin = await criarConta(repo, "ADMINISTRADOR", { email: "admin@example.com" });
-    const cliente = await criarConta(repo, "CLIENTE", { email: "cliente@example.com" });
+    const cliente = await criarConta(repo, "FUNCIONARIO", { email: "cliente@example.com" });
 
     await expect(alterarStatusConta(ator(admin), cliente.id, false, repo)).resolves.toMatchObject({ ativo: false });
     await expect(autenticarConta({ email: "cliente@example.com", senha: "SenhaForte1" }, repo)).rejects.toMatchObject({ code: "CONTA_INATIVA" });
@@ -394,17 +390,17 @@ describe("Contas por empresa", () => {
     const adulterado = { ...cadastroBase, empresaId: "outra", empresaSlug: "outra" };
     await expect(criarContaPorAdministrador(ator(admin), "FUNCIONARIO", adulterado, repo)).resolves.toMatchObject({ empresaId: admin.empresaId });
   });
-  it("cadastro legado e sessão continuam associados à empresa padrão", async () => {
+  it("cadastro e sessão do cliente independem de empresa", async () => {
     const repo = new MemoryContaRepository();
-    const conta = await cadastrarClientePublico(cadastroBase, repo, empresas);
-    expect(conta.empresaId).toBe(empresaPadrao.id);
+    const conta = await cadastrarClientePublico(cadastroBase, repo);
+    expect(conta.empresaId).toBeNull();
     const login = await autenticarConta(cadastroBase, repo);
-    await expect(obterContaPorSessao(login.sessao.id, login.sessao.token, repo)).resolves.toMatchObject({ empresaId: empresaPadrao.id, empresa: empresaPadrao });
+    await expect(obterContaPorSessao(login.sessao.id, login.sessao.token, repo)).resolves.toMatchObject({ empresaId: null, empresa: null });
   });
-  it("rejeita link de empresa inexistente sem criar cliente", async () => {
+  it("ignora empresa enviada no cadastro público", async () => {
     const repo = new MemoryContaRepository();
-    await expect(cadastrarClientePublico({ ...cadastroBase, empresaSlug: "inexistente" }, repo, empresas)).rejects.toMatchObject({ code: "EMPRESA_NAO_ENCONTRADA" });
-    expect(repo.contas).toHaveLength(0);
+    const conta = await cadastrarClientePublico({ ...cadastroBase, empresaSlug: "inexistente" }, repo);
+    expect(conta.empresaId).toBeNull();
   });
   it("contagem de administradores ativos é restrita à empresa", async () => {
     const repo = new MemoryContaRepository();

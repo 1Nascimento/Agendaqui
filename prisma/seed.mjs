@@ -50,14 +50,12 @@ async function main() {
 
   if (contaExistente) {
     if (contaExistente.empresaId !== empresa.id) throw new Error("O e-mail do seed pertence a outra empresa. Nenhuma conta foi alterada.");
+    if (contaExistente.perfil !== "ADMINISTRADOR") throw new Error("O e-mail do seed pertence a uma conta que não é administradora. Nenhuma conta foi alterada.");
     await prisma.conta.update({
       where: { id: contaExistente.id, empresaId: empresa.id },
       data: {
         nome,
         telefone,
-        senhaHash: await hashPassword(senha),
-        perfil: "ADMINISTRADOR",
-        ativo: true,
         emailVerificado: true
       }
     });

@@ -20,7 +20,6 @@ export default async function RedefinirSenhaPage({ searchParams }: RedefinirSenh
       <section className="auth-panel">
         <div className="brand">
           <h1>Redefinir senha</h1>
-          <p>Crie uma nova senha para sua conta.</p>
         </div>
         <Mensagem erro={params?.erro} />
         <form className="form" action={redefinirSenhaAction}>

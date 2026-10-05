@@ -20,7 +20,6 @@ export default async function MinhaContaPage({ searchParams }: MinhaContaPagePro
       <section className="panel">
         <div className="section-title">
           <h2>Minha conta</h2>
-          <p>Edite seus dados básicos permitidos.</p>
         </div>
         <div className="block-gap">
           <Mensagem erro={params?.erro} sucesso={params?.sucesso} />

@@ -8,6 +8,7 @@ import { AGENDA, formatarDataHora, type DiaDisponivel } from "@/server/agendamen
 type Pessoa = { id: string; nome: string };
 type Servico = { id: string; nome: string; preco: string; duracao: number };
 type Props = {
+  empresaId: string;
   servicos: Servico[];
   funcionarios: Pessoa[];
   clientes: Pessoa[];
@@ -17,7 +18,7 @@ type Props = {
 };
 const moeda = (valor: number) => valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function AgendamentoForm({ servicos, funcionarios, clientes, clienteAtual, funcionarioAtualId, remarcacao }: Props) {
+export function AgendamentoForm({ empresaId, servicos, funcionarios, clientes, clienteAtual, funcionarioAtualId, remarcacao }: Props) {
   const [selecionados, setSelecionados] = useState<string[]>(remarcacao ? servicos.map((s) => s.id) : []);
   const [funcionarioId, setFuncionarioId] = useState(remarcacao?.funcionario.id ?? funcionarioAtualId ?? "");
   const [clienteId, setClienteId] = useState(remarcacao?.cliente.id ?? clienteAtual?.id ?? "");
@@ -37,6 +38,7 @@ export function AgendamentoForm({ servicos, funcionarios, clientes, clienteAtual
   function consultar() {
     setErroConsulta(""); setRevisao(false); setData(""); setHorario(""); setDias(null);
     const form = new FormData();
+    form.set("empresaId", empresaId);
     if (remarcacao) form.set("id", remarcacao.id);
     form.set("clienteId", clienteId); form.set("funcionarioId", funcionarioId);
     selecionados.forEach((id) => form.append("servicoIds", id));
@@ -50,13 +52,14 @@ export function AgendamentoForm({ servicos, funcionarios, clientes, clienteAtual
 
   return (
     <form className="form block-gap" action={action} onSubmit={(event) => { if (!revisao || ocupado) event.preventDefault(); }}>
+      <input type="hidden" name="empresaId" value={empresaId} />
       {remarcacao && <><input type="hidden" name="id" value={remarcacao.id} /><input type="hidden" name="versao" value={remarcacao.versao} /></>}
       <input type="hidden" name="clienteId" value={clienteId} />
       <input type="hidden" name="funcionarioId" value={funcionarioId} />
       {selecionados.map((id) => <input key={id} type="hidden" name="servicoIds" value={id} />)}
       <input type="hidden" name="data" value={data} /><input type="hidden" name="horario" value={horario} />
-      {estado.erro && <p className="message error" role="alert">{estado.erro} Você pode consultar a disponibilidade novamente abaixo.</p>}
-      {remarcacao && <p className="message">Horário atual: <strong>{formatarDataHora(remarcacao.inicio)}</strong>. Os serviços, valores e funcionário serão mantidos.</p>}
+      {estado.erro && <p className="message error" role="alert">{estado.erro}</p>}
+      {remarcacao && <p className="message">Horário atual: <strong>{formatarDataHora(remarcacao.inicio)}</strong></p>}
       {!revisao ? <>
         {!remarcacao && <>
           <fieldset className="agenda-fieldset" disabled={ocupado}>
@@ -81,7 +84,6 @@ export function AgendamentoForm({ servicos, funcionarios, clientes, clienteAtual
           {!dias.length ? <div className="empty-state">Não há horários que comportem os serviços selecionados nos próximos {AGENDA.diasAntecedencia} dias. Tente outro funcionário ou outros serviços. O funcionário precisa ter um expediente cadastrado.</div> : <>
             <div className="field"><label htmlFor="agenda-data">Datas disponíveis</label><select id="agenda-data" value={data} onChange={(event) => { setData(event.target.value); setHorario(""); }}><option value="">Selecione uma data</option>{dias.map((dia) => <option key={dia.data} value={dia.data}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "full", timeZone: "UTC" }).format(new Date(`${dia.data}T12:00:00Z`))}</option>)}</select></div>
             {data && <fieldset className="agenda-fieldset"><legend>Horários livres</legend><div className="time-options">{dias.find((dia) => dia.data === data)?.horarios.map((hora) => <label key={hora} className={`time-option ${horario === hora ? "selected" : ""}`}><input type="radio" name="horaEscolhida" value={hora} checked={horario === hora} onChange={() => setHorario(hora)} />{hora}</label>)}</div></fieldset>}
-            <p className="muted">Horários da empresa: Brasília (UTC−3). A disponibilidade será verificada novamente na confirmação.</p>
             <div className="actions"><button className="button" type="button" disabled={!data || !horario || ocupado} onClick={() => setRevisao(true)}>Revisar agendamento</button></div>
           </>}
         </section>}

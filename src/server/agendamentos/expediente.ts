@@ -1,13 +1,13 @@
 import type { ContaAutenticada } from "@/server/domain/perfis";
 import { AgendaquiError } from "@/server/domain/errors";
-import { exigirEmpresaDoAtor } from "@/server/empresas/contexto";
+import { empresaDoAtor } from "@/server/empresas/contexto";
 import { dataLocal, horaLocal, type Expediente } from "./calendario";
 import type { AgendaRepository } from "./repository";
 
 export const DIAS_SEMANA = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 
 export async function salvarExpediente(ator: ContaAutenticada, funcionarioId: string, input: Expediente[], repo: AgendaRepository, agora = new Date()) {
-  const empresaId = exigirEmpresaDoAtor(ator);
+  const empresaId = empresaDoAtor(ator);
   if (!ator.ativo || (ator.perfil !== "ADMINISTRADOR" && !(ator.perfil === "FUNCIONARIO" && ator.id === funcionarioId))) throw new AgendaquiError("ACESSO_NEGADO", "Você não pode alterar este expediente.", 403);
   if (!Array.isArray(input) || input.length > 7 || new Set(input.map((dia) => dia.diaSemana)).size !== input.length || input.some((dia) =>
     !Number.isInteger(dia.diaSemana) || dia.diaSemana < 0 || dia.diaSemana > 6 || !Number.isInteger(dia.inicioMinuto) || !Number.isInteger(dia.fimMinuto) || dia.inicioMinuto < 0 || dia.fimMinuto > 1439 || dia.inicioMinuto >= dia.fimMinuto

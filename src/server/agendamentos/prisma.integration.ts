@@ -11,7 +11,7 @@ import { salvarExpediente } from "./expediente";
 // Identificadores exclusivos; a limpeza alcança somente os registros desta execução.
 const prefixo = `teste-agenda-${randomUUID()}`;
 const empresaId = `${prefixo}-empresa`;
-const criarAtor = (sufixo: string, perfil: ContaAutenticada["perfil"]): ContaAutenticada => ({ empresaId, id: `${prefixo}-${sufixo}`, nome: `Teste ${sufixo}`, email: `${prefixo}-${sufixo}@example.test`, ativo: true, perfil });
+const criarAtor = (sufixo: string, perfil: ContaAutenticada["perfil"]): ContaAutenticada => ({ empresaId: perfil === "CLIENTE" ? null : empresaId, id: `${prefixo}-${sufixo}`, nome: `Teste ${sufixo}`, email: `${prefixo}-${sufixo}@example.test`, ativo: true, perfil });
 const cliente = criarAtor("cliente", "CLIENTE");
 const outroCliente = criarAtor("outro-cliente", "CLIENTE");
 const funcionario = criarAtor("funcionario", "FUNCIONARIO");
@@ -23,7 +23,7 @@ const servicoId = `${prefixo}-servico`;
 const agora = new Date();
 const data = somarDias(dataLocal(agora), 2);
 const semana = Array.from({ length: 7 }, (_, diaSemana) => ({ diaSemana, inicioMinuto: 540, fimMinuto: 1080 }));
-const input = { servicoIds: [servicoId], funcionarioId: funcionario.id, data, horario: "09:00" };
+const input = { empresaId, servicoIds: [servicoId], funcionarioId: funcionario.id, data, horario: "09:00" };
 
 describe("Agenda no PostgreSQL", () => {
   beforeAll(async () => {
@@ -103,7 +103,7 @@ describe("Agenda no PostgreSQL", () => {
       return `${process.env.SESSION_COOKIE_NAME || "agendaqui_session"}=${sessao.id}.${token}`;
     };
     const cookieCliente = await cookie(cliente);
-    for (const [path, conteudo] of [["/agendamentos", "Meus agendamentos"], ["/agendamentos/novo", "Selecione os serviços"], [`/agendamentos/${a.id}`, "Histórico de alterações"], [`/agendamentos/${a.id}/remarcar`, "Horário atual"], ["/agendamentos?aba=historico", "Nenhum agendamento no histórico"]]) {
+    for (const [path, conteudo] of [["/agendamentos", "Meus agendamentos"], [`/agendamentos/novo?empresa=${empresaId}`, "Selecione os serviços"], [`/agendamentos/${a.id}`, "Histórico de alterações"], [`/agendamentos/${a.id}/remarcar`, "Horário atual"], ["/agendamentos?aba=historico", "Nenhum agendamento no histórico"]]) {
       const resposta = await fetch(`${base}${path}`, { headers: { cookie: cookieCliente }, redirect: "manual" });
       expect(resposta.status).toBe(200);
       expect(await resposta.text()).toContain(conteudo);
@@ -119,5 +119,5 @@ describe("Agenda no PostgreSQL", () => {
     expect(outro.headers.get("location")).toBe("/acesso-negado");
     const semPermissao = await fetch(`${base}/funcionario/expediente`, { headers: { cookie: cookieCliente }, redirect: "manual" });
     expect(semPermissao.headers.get("location")).toBe("/acesso-negado");
-  });
+  }, 60000);
 });

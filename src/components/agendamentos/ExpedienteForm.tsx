@@ -26,7 +26,6 @@ export function ExpedienteForm({ funcionarioId, expedientes }: { funcionarioId: 
         </div>;
       })}
     </fieldset>
-    <p className="muted">Use o horário de Brasília (UTC−3). Os horários se repetem semanalmente. Dias desmarcados ficam indisponíveis; nenhum dia marcado fecha a agenda. Alterações precisam respeitar os atendimentos já confirmados.</p>
     <div className="actions"><button type="submit" disabled={pendente} className="button">{pendente ? "Salvando…" : "Salvar expediente"}</button></div>
   </form>;
 }

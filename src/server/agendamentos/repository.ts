@@ -5,9 +5,11 @@ import type { Ocupacao, Expediente } from "./calendario";
 
 export const detalhesAgendamento = {
   cliente: { select: { id: true, nome: true } },
+  empresa: { select: { id: true, nome: true, slug: true } },
   funcionario: { select: { id: true, nome: true } },
   servicos: { orderBy: { nome: "asc" as const } },
-  eventos: { orderBy: { createdAt: "asc" as const }, include: { ator: { select: { nome: true } } } }
+  pagamentos: { orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }], include: { registradoPor: { select: { nome: true } }, estornadoPor: { select: { nome: true } } } },
+  eventos: { orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }], include: { ator: { select: { nome: true } } } }
 } satisfies Prisma.AgendamentoInclude;
 
 export type AgendamentoRecord = Prisma.AgendamentoGetPayload<{ include: typeof detalhesAgendamento }>;
@@ -25,9 +27,9 @@ export type FiltroOcupacao = Ocupacao & { empresaId: string; clienteId: string; 
 export interface AgendaLeitura {
   expedientes(funcionarioId: string, empresaId: string): Promise<Expediente[]>;
   futuros(funcionarioId: string, agora: Date, empresaId: string): Promise<Ocupacao[]>;
-  conta(id: string, empresaId: string): Promise<ContaAutenticada | null>;
+  conta(id: string, empresaId: string | null): Promise<ContaAutenticada | null>;
   servicos(ids: string[], empresaId: string): Promise<ServicoRecord[]>;
-  agendamento(id: string, empresaId: string): Promise<AgendamentoRecord | null>;
+  agendamento(id: string, empresaId: string | null): Promise<AgendamentoRecord | null>;
   ocupacoes(filtro: FiltroOcupacao): Promise<Ocupacao[]>;
   listar(ator: ContaAutenticada): Promise<AgendamentoRecord[]>;
 }

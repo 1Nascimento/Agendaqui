@@ -9,7 +9,6 @@ import { gravarSessaoCookie, encerrarSessaoAtual } from "@/server/auth/session-c
 import { rotaInicialPorPerfil } from "@/server/domain/perfis";
 import { prismaEmpresaRepository } from "@/server/empresas/prisma-repository";
 import { cadastrarEmpresa } from "@/server/empresas/service";
-import { EMPRESA_PADRAO_SLUG } from "@/server/empresas/contexto";
 
 function appUrl() {
   return process.env.APP_URL || "http://localhost:3000";
@@ -54,22 +53,19 @@ export async function logoutAction() {
 }
 
 export async function cadastrarClienteAction(formData: FormData) {
-  const empresaSlug = campo(formData, "empresaSlug") || EMPRESA_PADRAO_SLUG;
   try {
     await cadastrarClientePublico(
       {
         nome: campo(formData, "nome"),
-        empresaSlug,
         telefone: campo(formData, "telefone"),
         email: campo(formData, "email"),
         senha: campo(formData, "senha"),
         confirmarSenha: campo(formData, "confirmarSenha")
       },
-      prismaContaRepository,
-      prismaEmpresaRepository
+      prismaContaRepository
     );
   } catch (error) {
-    const params = new URLSearchParams({ empresa: empresaSlug, erro: mensagemErroForm(error) });
+    const params = new URLSearchParams({ erro: mensagemErroForm(error) });
     redirect(`/cadastro?${params.toString()}`);
   }
 

@@ -14,7 +14,6 @@ export function AdminServicosView({ servicos, erro, sucesso }: AdminServicosView
     <section className="panel">
       <div className="section-title">
         <h2>Servicos</h2>
-        <p>Cadastre, edite e exclua os servicos disponiveis.</p>
       </div>
       <Mensagem erro={erro} sucesso={sucesso} />
       <div className="actions toolbar-gap">

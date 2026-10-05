@@ -8,11 +8,10 @@ export default async function CadastroEmpresaPage({ searchParams }: { searchPara
   await redirecionarSeAutenticado();
   const params = await searchParams;
   return <main className="public-page"><section className="auth-panel">
-    <div className="brand"><h1>Cadastre sua empresa</h1><p>Crie a empresa e sua conta de administrador. Cada empresa terá suas próprias contas, serviços e agenda.</p></div>
+    <div className="brand"><h1>Cadastre sua empresa</h1></div>
     <Mensagem erro={params.erro} />
     <CadastroContaForm action={cadastrarEmpresaAction} submitLabel="Criar empresa e administrador">
       <div className="field"><label htmlFor="nomeEmpresa">Nome da empresa</label><input id="nomeEmpresa" name="nomeEmpresa" maxLength={100} required /></div>
-      <p className="muted">Informe abaixo os dados do administrador.</p>
     </CadastroContaForm>
     <div className="links"><Link href="/login">Já tenho conta</Link><Link href="/cadastro">Sou cliente</Link></div>
   </section></main>;

@@ -19,7 +19,7 @@ export default async function EditarServicoPage({ params, searchParams }: Editar
   return (
     <AppShell conta={ator} active="admin">
       <section className="panel">
-        <div className="section-title"><h2>Editar servico</h2><p>Atualize o nome, preco ou duracao do atendimento.</p></div>
+        <div className="section-title"><h2>Editar servico</h2></div>
         <div className="block-gap">
           <Mensagem erro={query?.erro} />
           <ServicoForm action={atualizarServicoAction} submitLabel="Salvar servico" servico={{ ...servico, preco: servico.preco.toFixed(2) }} />

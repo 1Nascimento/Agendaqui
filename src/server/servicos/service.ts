@@ -8,7 +8,7 @@ export type ServicoPublico = Omit<ServicoRecord, "preco"> & {
   preco: string;
 };
 
-function assertAdministrador(ator: ContaAutenticada) {
+function assertAdministrador(ator: ContaAutenticada): asserts ator is ContaAutenticada & { empresaId: string } {
   exigirEmpresaDoAtor(ator);
   if (ator.perfil !== "ADMINISTRADOR") {
     throw new AgendaquiError("ACESSO_NEGADO", "Acesso negado.", 403);
@@ -72,7 +72,7 @@ export async function listarServicos(ator: ContaAutenticada, repository: Servico
 }
 
 export async function listarServicosDisponiveis(ator: ContaAutenticada, repository: ServicoRepository) {
-  const empresaId = exigirEmpresaDoAtor(ator);
-  const servicos = await repository.listServicosDisponiveis(empresaId);
+  exigirEmpresaDoAtor(ator);
+  const servicos = await repository.listServicosDisponiveis(ator.empresaId);
   return servicos.map(servicoPublico);
 }

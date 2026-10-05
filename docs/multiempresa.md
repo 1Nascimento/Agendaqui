@@ -2,6 +2,18 @@
 
 A implementação preserva os módulos de usuários, serviços e agendamentos, seus perfis e rotas. Empresa é uma entidade própria; não é funcionário e não existe perfil SUPER_ADMIN.
 
+## Clientes independentes
+
+A migration `20261006000000_clientes_independentes` torna a conta do cliente independente, com `empresaId` nulo. Administradores e funcionários continuam vinculados a uma empresa. A constraint por perfil impede contas administrativas sem empresa e clientes com vínculo único.
+
+O cadastro público não precisa de link específico. Em `/empresas`, o cliente pesquisa pelo nome e escolhe a empresa para um novo agendamento. O servidor valida serviços e funcionários da empresa escolhida, mantém o cliente da sessão e verifica também conflitos desse cliente em outras empresas.
+
+A lista administrativa de clientes é obtida pelos agendamentos já confirmados na empresa, inclusive os cancelados posteriormente. Não é necessário um cadastro duplicado ou uma tabela adicional de vínculos. O administrador consulta os dados desses clientes; alterações de dados e credenciais são feitas pelo próprio cliente. Detalhes, remarcações e cancelamentos verificam a propriedade do agendamento.
+
+Contas, senhas, sessões, serviços, expedientes e reservas anteriores são preservados. Clientes antigos passam a ser independentes; quem ainda não agendou não aparece em listas de empresas. A Empresa Principal mantém os dados operacionais legados e tem a mesma posição das outras empresas. O link de cadastro no dashboard foi removido.
+
+As seções abaixo registram a implementação multiempresa original, anterior a essa alteração.
+
 ## Pontos de isolamento
 
 | Área | Alteração |

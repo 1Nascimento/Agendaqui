@@ -33,7 +33,6 @@ export default async function EditarContaPage({ params, searchParams }: EditarCo
       <section className="panel">
         <div className="section-title">
           <h2>Editar conta</h2>
-          <p>Altere apenas dados básicos. O perfil não é editável nesta etapa.</p>
         </div>
         <div className="block-gap">
           <Mensagem erro={query?.erro} />

@@ -40,6 +40,14 @@ it("migra registros legados completos para a empresa padrão sem perder relaçõ
         expect(rows.every((r) => r.empresaId === "empresa_padrao")).toBe(true);
       }
       expect(await tx.$queryRawUnsafe(`SELECT "nome", "slug" FROM "Empresa"`)).toEqual([{ nome: "Barbearia Principal", slug: "barbearia-principal" }]);
+      await aplicar("20261005000000_modulo_4_gerenciamento_operacional");
+      expect(await retrato()).toEqual(antes);
+      expect(await tx.$queryRawUnsafe(`SELECT "status"::text AS status FROM "Agendamento"`)).toEqual([{ status: "CONFIRMADO" }]);
+      expect(await tx.$queryRawUnsafe(`SELECT count(*)::int AS total FROM "Pagamento"`)).toEqual([{ total: 0 }]);
+      await aplicar("20261006000000_clientes_independentes");
+      expect(await retrato()).toEqual(antes);
+      expect(await tx.$queryRawUnsafe(`SELECT "empresaId" FROM "Conta" WHERE "id" = 'cliente'`)).toEqual([{ empresaId: null }]);
+      expect(await tx.$queryRawUnsafe(`SELECT "empresaId" FROM "Agendamento"`)).toEqual([{ empresaId: "empresa_padrao" }]);
       validado = true;
       throw rollback;
     }, { timeout: 20000 });

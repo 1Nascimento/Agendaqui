@@ -11,7 +11,6 @@ export default async function AcessoNegadoPage() {
       <section className="auth-panel">
         <div className="brand">
           <h1>Acesso negado</h1>
-          <p>Seu perfil não possui permissão para acessar esta área.</p>
         </div>
         <Link className="button" href={destino}>Voltar</Link>
       </section>

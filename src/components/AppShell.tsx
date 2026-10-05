@@ -13,7 +13,8 @@ export function AppShell({ conta, active, children }: AppShellProps) {
     conta.perfil === "CLIENTE" ? { href: "/cliente", label: "Área do Cliente", key: "cliente" } : null,
     conta.perfil === "FUNCIONARIO" ? { href: "/funcionario", label: "Área do Funcionário", key: "funcionario" } : null,
     conta.perfil === "ADMINISTRADOR" ? { href: "/admin", label: "Administração", key: "admin" } : null,
-    { href: "/servicos", label: "Servicos", key: "servicos" },
+    conta.perfil === "ADMINISTRADOR" ? { href: "/admin/pagamentos", label: "Pagamentos", key: "pagamentos" } : null,
+    conta.perfil === "CLIENTE" ? { href: "/empresas", label: "Empresas", key: "empresas" } : { href: "/servicos", label: "Servicos", key: "servicos" },
     { href: "/agendamentos", label: "Agendamentos", key: "agendamentos" },
     { href: "/minha-conta", label: "Minha conta", key: "minha-conta" }
   ].filter(Boolean) as Array<{ href: string; label: string; key: string }>;
@@ -24,7 +25,7 @@ export function AppShell({ conta, active, children }: AppShellProps) {
         <header className="topbar">
           <div className="brand">
             <h1>Agendaqui</h1>
-            <p><strong>{conta.empresa.nome}</strong></p>
+            {conta.empresa && <p><strong>{conta.empresa.nome}</strong></p>}
             <p>{conta.nome} · {perfilLabel(conta.perfil)}</p>
           </div>
           <nav aria-label="Navegação principal">

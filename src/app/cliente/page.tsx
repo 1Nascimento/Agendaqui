@@ -10,10 +10,9 @@ export default async function ClientePage() {
       <section className="panel">
         <div className="section-title">
           <h2>Olá, {conta.nome}</h2>
-          <p>Esta é sua área básica de Cliente no Agendaqui.</p>
         </div>
         <div className="actions block-gap">
-          <Link className="button" href="/agendamentos/novo">Agendar atendimento</Link>
+          <Link className="button" href="/empresas">Buscar empresa</Link>
           <Link className="button secondary" href="/agendamentos">Meus agendamentos</Link>
           <Link className="button" href="/minha-conta">Minha conta</Link>
         </div>

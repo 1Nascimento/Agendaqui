@@ -37,12 +37,12 @@ export function ContasTable({ contas }: ContasTableProps) {
                 </span>
               </td>
               <td>
-                <div className="actions">
+                {conta.perfil !== "CLIENTE" ? <div className="actions">
                   <Link className="button secondary small" href={`/admin/contas/${conta.id}/editar`}>
                     Editar
                   </Link>
                   <StatusContaForm contaId={conta.id} ativo={conta.ativo} />
-                </div>
+                </div> : "—"}
               </td>
             </tr>
           ))}

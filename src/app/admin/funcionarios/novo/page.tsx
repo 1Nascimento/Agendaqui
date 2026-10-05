@@ -20,7 +20,6 @@ export default async function NovoFuncionarioPage({ searchParams }: NovoFunciona
       <section className="panel">
         <div className="section-title">
           <h2>Novo Funcionário</h2>
-          <p>Cadastro restrito a Administradores.</p>
         </div>
         <div className="block-gap">
           <Mensagem erro={params?.erro} />

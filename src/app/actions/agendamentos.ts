@@ -11,12 +11,13 @@ import { salvarExpediente } from "@/server/agendamentos/expediente";
 export type EstadoAgendamento = { erro?: string; sucesso?: string };
 
 function dados(form: FormData) {
-  return { clienteId: campo(form, "clienteId"), funcionarioId: campo(form, "funcionarioId"), servicoIds: form.getAll("servicoIds"), data: campo(form, "data"), horario: campo(form, "horario") };
+  return { empresaId: campo(form, "empresaId"), clienteId: campo(form, "clienteId"), funcionarioId: campo(form, "funcionarioId"), servicoIds: form.getAll("servicoIds"), data: campo(form, "data"), horario: campo(form, "horario") };
 }
 
 function revalidarAgenda() {
   revalidatePath("/agendamentos", "layout");
   revalidatePath("/funcionario/expediente");
+  revalidatePath("/admin", "layout");
 }
 
 export async function disponibilidadeAction(form: FormData) {

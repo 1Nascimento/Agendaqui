@@ -5,8 +5,7 @@ import { ContaAutenticada, ContaPublica, PerfilConta } from "@/server/domain/per
 import { CadastroContaInput, DadosBasicosContaInput, validarCadastroConta, validarDadosBasicosConta, validarEmailRecuperacao, validarLogin, validarNovaSenha } from "@/server/contas/validation";
 import { ContaRecord, ContaRepository } from "@/server/contas/repository";
 import { EnviadorRecuperacaoSenha } from "@/server/email/recuperacao-senha";
-import { EMPRESA_PADRAO_SLUG, exigirEmpresaDoAtor } from "@/server/empresas/contexto";
-import type { EmpresaRepository } from "@/server/empresas/repository";
+import { exigirEmpresaDoAtor } from "@/server/empresas/contexto";
 
 const TEMPO_SESSAO_DIAS = 7;
 
@@ -26,7 +25,7 @@ export function contaAutenticada(conta: ContaRecord | ContaPublica): ContaAutent
   };
 }
 
-function assertAdministrador(ator: ContaAutenticada) {
+function assertAdministrador(ator: ContaAutenticada): asserts ator is ContaAutenticada & { empresaId: string } {
   exigirEmpresaDoAtor(ator);
   if (ator.perfil !== "ADMINISTRADOR") {
     throw new AgendaquiError("ACESSO_NEGADO", "Acesso negado.", 403);
@@ -47,15 +46,12 @@ async function assertEmailDisponivel(repository: ContaRepository, email: string,
   }
 }
 
-export async function cadastrarClientePublico(input: CadastroContaInput, repository: ContaRepository, empresas: EmpresaRepository) {
+export async function cadastrarClientePublico(input: CadastroContaInput, repository: ContaRepository) {
   const data = validarCadastroConta(input);
-  const slug = input.empresaSlug === undefined ? EMPRESA_PADRAO_SLUG : typeof input.empresaSlug === "string" ? input.empresaSlug.trim() : "";
-  const empresa = slug ? await empresas.findBySlug(slug) : null;
-  if (!empresa) throw new AgendaquiError("EMPRESA_NAO_ENCONTRADA", "Empresa não encontrada. Verifique o link de cadastro.", 404);
   await assertEmailDisponivel(repository, data.email);
 
   const conta = await repository.createConta({
-    empresaId: empresa.id,
+    empresaId: null,
     nome: data.nome,
     telefone: data.telefone,
     email: data.email,
@@ -137,7 +133,7 @@ export async function obterContaPorSessao(sessionId: string, token: string, repo
     return null;
   }
 
-  if (!sessao.conta.ativo || !sessao.conta.empresaId || sessao.conta.empresa?.id !== sessao.conta.empresaId) {
+  if (!sessao.conta.ativo || (sessao.conta.perfil !== "CLIENTE" && (!sessao.conta.empresaId || sessao.conta.empresa?.id !== sessao.conta.empresaId))) {
     await repository.revokeSessao(sessionId, now);
     return null;
   }
@@ -160,7 +156,7 @@ export async function listarContas(ator: ContaAutenticada, repository: ContaRepo
 }
 
 export async function editarConta(ator: ContaAutenticada, contaId: string, input: DadosBasicosContaInput, repository: ContaRepository) {
-  exigirEmpresaDoAtor(ator);
+  if (ator.perfil !== "CLIENTE") exigirEmpresaDoAtor(ator);
   const podeEditar = ator.perfil === "ADMINISTRADOR" || ator.id === contaId;
 
   if (!podeEditar) {
@@ -168,7 +164,7 @@ export async function editarConta(ator: ContaAutenticada, contaId: string, input
   }
 
   const alvo = await repository.findById(contaId, ator.empresaId);
-  if (!alvo || alvo.empresaId !== ator.empresaId) throw new AgendaquiError("CONTA_NAO_ENCONTRADA", "Conta nao encontrada.", 404);
+  if (!alvo || alvo.empresaId !== ator.empresaId || (ator.id !== contaId && alvo.perfil === "CLIENTE")) throw new AgendaquiError("CONTA_NAO_ENCONTRADA", "Conta nao encontrada.", 404);
   const data = validarDadosBasicosConta(input);
   await assertEmailDisponivel(repository, data.email, contaId);
 
@@ -181,7 +177,7 @@ export async function alterarStatusConta(ator: ContaAutenticada, contaId: string
 
   const alvo = await repository.findById(contaId, ator.empresaId);
 
-  if (!alvo || alvo.empresaId !== ator.empresaId) {
+  if (!alvo || alvo.empresaId !== ator.empresaId || alvo.perfil === "CLIENTE") {
     throw new AgendaquiError("CONTA_NAO_ENCONTRADA", "Conta nao encontrada.", 404);
   }
 
@@ -273,9 +269,8 @@ export async function redefinirSenha(
   const senha = validarNovaSenha(input);
   const senhaHash = await hashPassword(senha);
 
-  await repository.updateConta(registro.contaId, { senhaHash }, registro.conta.empresaId);
-  await repository.marcarTokenRecuperacaoSenhaUtilizado(registro.id, now);
-  await repository.revokeSessoesByContaId(registro.contaId, now, registro.conta.empresaId);
+  const alterada = await repository.redefinirSenhaAtomica(registro.id, senhaHash, now);
+  if (!alterada) throw new AgendaquiError("TOKEN_UTILIZADO", "Este link expirou ou já foi utilizado. Solicite uma nova recuperação de senha.", 409);
 
   return { ok: true };
 }

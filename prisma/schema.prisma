@@ -26,8 +26,8 @@ model Empresa {
 }
 
 model Conta {
-  empresaId        String
-  empresa          Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  empresaId        String?
+  empresa          Empresa? @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   id               String                    @id @default(cuid())
   nome             String
   email            String                    @unique
@@ -44,6 +44,8 @@ model Conta {
   agendamentosCliente Agendamento[] @relation("ClienteAgendamento")
   agendamentosFuncionario Agendamento[] @relation("FuncionarioAgendamento")
   eventosAgendamento EventoAgendamento[]
+  pagamentosRegistrados Pagamento[] @relation("PagamentoRegistrador")
+  pagamentosEstornados Pagamento[] @relation("PagamentoEstornador")
   expedientes ExpedienteFuncionario[]
 
   @@index([perfil])
@@ -101,6 +103,8 @@ model Servico {
 enum StatusAgendamento {
   CONFIRMADO
   CANCELADO
+  REALIZADO
+  NAO_COMPARECEU
 }
 
 model ExpedienteFuncionario {
@@ -121,6 +125,8 @@ enum TipoEventoAgendamento {
   CONFIRMADO
   REMARCADO
   CANCELADO
+  REALIZADO
+  NAO_COMPARECEU
 }
 
 model Agendamento {
@@ -135,14 +141,43 @@ model Agendamento {
   versao        Int @default(1)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  cliente       Conta @relation("ClienteAgendamento", fields: [clienteId, empresaId], references: [id, empresaId], onDelete: Restrict, onUpdate: Restrict)
+  cliente       Conta @relation("ClienteAgendamento", fields: [clienteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   funcionario   Conta @relation("FuncionarioAgendamento", fields: [funcionarioId, empresaId], references: [id, empresaId], onDelete: Restrict, onUpdate: Restrict)
   servicos      AgendamentoServico[]
   eventos       EventoAgendamento[]
+  pagamentos    Pagamento[]
 
+  @@unique([id, empresaId])
   @@index([funcionarioId, status, inicio, fim])
   @@index([clienteId, status, inicio, fim])
   @@index([empresaId, status, inicio])
+}
+
+enum FormaPagamento {
+  DINHEIRO
+  PIX
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+}
+
+// Recebimentos manuais imutáveis. Estornos preservam valor, autor e motivo.
+model Pagamento {
+  id             String @id @default(cuid())
+  empresaId      String
+  agendamentoId  String
+  valor          Decimal @db.Decimal(10, 2)
+  forma          FormaPagamento
+  registradoPorId String
+  createdAt      DateTime @default(now())
+  estornadoEm    DateTime?
+  estornadoPorId String?
+  motivoEstorno  String?
+  agendamento    Agendamento @relation(fields: [agendamentoId, empresaId], references: [id, empresaId], onDelete: Cascade, onUpdate: Restrict)
+  registradoPor  Conta @relation("PagamentoRegistrador", fields: [registradoPorId, empresaId], references: [id, empresaId], onDelete: Restrict, onUpdate: Restrict)
+  estornadoPor   Conta? @relation("PagamentoEstornador", fields: [estornadoPorId, empresaId], references: [id, empresaId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([empresaId, createdAt])
+  @@index([agendamentoId])
 }
 
 // Cópias do nome, preço e duração preservam as condições da confirmação.

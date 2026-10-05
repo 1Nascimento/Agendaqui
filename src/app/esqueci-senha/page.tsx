@@ -19,7 +19,6 @@ export default async function EsqueciSenhaPage({ searchParams }: EsqueciSenhaPag
       <section className="auth-panel">
         <div className="brand">
           <h1>Esqueci minha senha</h1>
-          <p>Informe seu e-mail para receber o link de redefinição.</p>
         </div>
         <Mensagem erro={params?.erro} sucesso={params?.sucesso} />
         <form className="form" action={solicitarRecuperacaoSenhaAction}>

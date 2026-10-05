@@ -14,7 +14,7 @@ const funcionario: ContaAutenticada = { ...cliente, id: "funcionario", perfil: "
 const outroFuncionario = { ...funcionario, id: "outro-funcionario" };
 const admin: ContaAutenticada = { ...cliente, id: "admin", perfil: "ADMINISTRADOR" };
 const expediente = [1, 2, 3, 4, 5, 6].map((diaSemana) => ({ diaSemana, inicioMinuto: 540, fimMinuto: 1080 }));
-const input = { funcionarioId: funcionario.id, servicoIds: ["corte", "barba"], data: "2026-09-21", horario: "09:00" };
+const input = { empresaId: "empresa_padrao", funcionarioId: funcionario.id, servicoIds: ["corte", "barba"], data: "2026-09-21", horario: "09:00" };
 
 class MemoryAgenda implements AgendaRepository, AgendaTransacao {
   contas = [cliente, outroCliente, funcionario, outroFuncionario, admin].map((c) => ({ ...c }));
@@ -24,9 +24,9 @@ class MemoryAgenda implements AgendaRepository, AgendaTransacao {
   ];
   registros: AgendamentoRecord[] = [];
   horarios = new Map([[funcionario.id, expediente.map((e) => ({ ...e }))], [outroFuncionario.id, expediente.map((e) => ({ ...e }))]]);
-  async conta(id: string, empresaId: string) { return this.contas.find((c) => c.id === id && c.empresaId === empresaId) ?? null; }
+  async conta(id: string, empresaId: string | null) { return this.contas.find((c) => c.id === id && (empresaId === null ? c.perfil === "CLIENTE" : c.empresaId === empresaId)) ?? null; }
   async servicos(ids: string[], empresaId: string) { return this.catalogo.filter((s) => ids.includes(s.id) && s.empresaId === empresaId); }
-  async agendamento(id: string, empresaId: string) { return this.registros.find((a) => a.id === id && a.empresaId === empresaId) ?? null; }
+  async agendamento(id: string, empresaId: string | null) { return this.registros.find((a) => a.id === id && (empresaId === null || a.empresaId === empresaId)) ?? null; }
   async expedientes(id: string, empresaId: string) { return await this.conta(id, empresaId) ? this.horarios.get(id) ?? [] : []; }
   async futuros(id: string, data: Date, empresaId: string) { return this.registros.filter((a) => a.empresaId === empresaId && a.funcionarioId === id && a.status === "CONFIRMADO" && a.fim > data); }
   async salvarExpedientes(id: string, dias: Expediente[], empresaId: string) { if (!await this.conta(id, empresaId)) throw new Error("Funcionário inválido"); this.horarios.set(id, dias); }
@@ -36,7 +36,7 @@ class MemoryAgenda implements AgendaRepository, AgendaTransacao {
   async criar(data: NovoAgendamento) {
     const { atorId, servicos, ...periodo } = data;
     const id = `agenda-${this.registros.length}`;
-    const a: AgendamentoRecord = { ...periodo, id, status: "CONFIRMADO", versao: 1, createdAt: agora, updatedAt: agora,
+    const a: AgendamentoRecord = { ...periodo, id, status: "CONFIRMADO", versao: 1, createdAt: agora, updatedAt: agora, pagamentos: [], empresa: { id: data.empresaId, nome: "Teste", slug: "teste" },
       cliente: { id: data.clienteId, nome: "Cliente" }, funcionario: { id: data.funcionarioId, nome: "Funcionário" },
       servicos: servicos.map((s, index) => ({ ...s, preco: new Prisma.Decimal(s.preco), id: `item-${index}`, agendamentoId: id })),
       eventos: [{ id: `evento-${id}`, agendamentoId: id, atorId, ator: { nome: "Ator" }, tipo: "CONFIRMADO", inicio: data.inicio, fim: data.fim, inicioAnterior: null, fimAnterior: null, createdAt: agora }]
@@ -234,6 +234,6 @@ describe("Agenda por empresa", () => {
   it("administrador não altera expediente de outra empresa", async () => {
     const repo = new MemoryAgenda();
     await expect(salvarExpediente({ ...admin, empresaId: "outra" }, funcionario.id, [], repo, agora)).rejects.toMatchObject({ code: "FUNCIONARIO_INVALIDO" });
-    expect(await repo.expedientes(funcionario.id, cliente.empresaId)).toEqual(expediente);
+    expect(await repo.expedientes(funcionario.id, "empresa_padrao")).toEqual(expediente);
   });
 });

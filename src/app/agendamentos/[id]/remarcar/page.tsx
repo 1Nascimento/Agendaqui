@@ -9,8 +9,8 @@ export default async function RemarcarPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const a = await agendamentoDaPagina(conta, id);
   return <AppShell conta={conta} active="agendamentos"><section className="panel">
-    <div className="section-title"><h2>Remarcar atendimento</h2><p>Escolha um novo horário disponível para o mesmo funcionário.</p></div>
+    <div className="section-title"><h2>Remarcar atendimento</h2></div>
     {a.status !== "CONFIRMADO" || a.inicio <= new Date() ? <div className="empty-state block-gap">Este agendamento não pode mais ser remarcado. <Link href={`/agendamentos/${a.id}`}>Voltar aos detalhes</Link></div> :
-      <AgendamentoForm servicos={a.servicos.map((s) => ({ id: s.id, nome: s.nome, preco: s.preco.toFixed(2), duracao: s.duracao }))} funcionarios={[a.funcionario]} clientes={[a.cliente]} remarcacao={{ id: a.id, versao: a.versao, inicio: a.inicio.toISOString(), cliente: a.cliente, funcionario: a.funcionario }} />}
+      <AgendamentoForm empresaId={a.empresaId} servicos={a.servicos.map((s) => ({ id: s.id, nome: s.nome, preco: s.preco.toFixed(2), duracao: s.duracao }))} funcionarios={[a.funcionario]} clientes={[a.cliente]} remarcacao={{ id: a.id, versao: a.versao, inicio: a.inicio.toISOString(), cliente: a.cliente, funcionario: a.funcionario }} />}
   </section></AppShell>;
 }

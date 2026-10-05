@@ -4,7 +4,7 @@ import globals from "globals";
 import nextPlugin from "@next/eslint-plugin-next";
 
 export default tseslint.config(
-  { ignores: ["node_modules/**", ".next/**", "coverage/**", "next-env.d.ts"] },
+  { ignores: ["node_modules/**", ".next/**", ".next-dev/**", "coverage/**", "next-env.d.ts"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   { plugins: { "@next/next": nextPlugin }, rules: { ...nextPlugin.configs.recommended.rules, ...nextPlugin.configs["core-web-vitals"].rules } },

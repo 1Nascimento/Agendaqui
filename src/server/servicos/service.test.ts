@@ -132,7 +132,7 @@ describe("Modulo 2 - gerenciamento de servicos", () => {
 
   it("lista como disponiveis apenas servicos ativos", async () => {
     const criado = await criarServico(administrador, servicoBase, repo);
-    const servico = await repo.findById(criado.id, administrador.empresaId);
+    const servico = await repo.findById(criado.id, administrador.empresaId!);
 
     if (servico) servico.ativo = false;
 

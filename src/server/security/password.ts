@@ -22,11 +22,12 @@ export async function hashPassword(password: string) {
 export async function verifyPassword(password: string, storedHash: string) {
   const [algorithm, n, r, p, salt, key] = storedHash.split("$");
 
-  if (algorithm !== "scrypt" || !n || !r || !p || !salt || !key) {
+  if (algorithm !== "scrypt" || n !== String(SCRYPT_N) || r !== String(SCRYPT_R) || p !== String(SCRYPT_P) || !salt || !key) {
     return false;
   }
 
   const expected = Buffer.from(key, "base64url");
+  if (expected.length !== KEY_LENGTH) return false;
   const derived = (await scrypt(password, salt, expected.length, {
     N: Number(n),
     r: Number(r),

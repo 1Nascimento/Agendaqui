@@ -14,7 +14,7 @@ export default async function NovoServicoPage({ searchParams }: NovoServicoPageP
   return (
     <AppShell conta={conta} active="admin">
       <section className="panel">
-        <div className="section-title"><h2>Novo servico</h2><p>Cadastre o preco e a duracao do atendimento.</p></div>
+        <div className="section-title"><h2>Novo servico</h2></div>
         <div className="block-gap"><Mensagem erro={params?.erro} /><ServicoForm action={criarServicoAction} submitLabel="Criar servico" /></div>
         <div className="links"><Link href="/admin/servicos">Voltar</Link></div>
       </section>

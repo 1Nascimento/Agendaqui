@@ -7,6 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "setup": "prisma generate && prisma migrate deploy && prisma db seed",
+    "test:installation": "node --env-file=.env scripts/verificar-instalacao.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",

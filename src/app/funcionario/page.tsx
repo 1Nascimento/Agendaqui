@@ -10,10 +10,10 @@ export default async function FuncionarioPage() {
       <section className="panel">
         <div className="section-title">
           <h2>Área do Funcionário</h2>
-          <p>Conta autenticada e protegida para uso operacional básico.</p>
         </div>
         <div className="actions block-gap">
           <Link className="button" href="/agendamentos">Minha agenda</Link>
+          <Link className="button" href="/agendamentos?aba=baixa">Registrar atendimentos</Link>
           <Link className="button secondary" href="/funcionario/expediente">Meu expediente</Link>
           <Link className="button" href="/minha-conta">Minha conta</Link>
         </div>

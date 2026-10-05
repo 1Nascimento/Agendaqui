@@ -5,8 +5,8 @@ export const PERFIS_CONTA = ["CLIENTE", "FUNCIONARIO", "ADMINISTRADOR"] as const
 export type PerfilConta = (typeof PERFIS_CONTA)[number];
 
 export type ContaPublica = {
-  empresaId: string;
-  empresa: EmpresaResumo;
+  empresaId: string | null;
+  empresa: EmpresaResumo | null;
   id: string;
   nome: string;
   email: string;

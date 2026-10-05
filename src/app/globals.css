@@ -344,6 +344,21 @@ th {
 .time-options { display: flex; flex-wrap: wrap; gap: 10px; }
 .time-option { display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; cursor: pointer; }
 .time-option.selected { border-color: var(--primary); }
+.dashboard-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.dashboard-heading h2 { margin: 0; }
+.dashboard-overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.dashboard-overview .summary-item { padding: 12px; border-radius: 6px; }
+.dashboard-overview .summary-item:hover { background: var(--surface-muted); }
+.dashboard-overview .summary-item:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.dashboard-shortcuts { display: flex; flex-wrap: wrap; gap: 10px; }
+.dashboard-agenda { min-width: 540px; }
+.dashboard-registration summary { cursor: pointer; font-weight: 700; }
+.financial-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 24px; margin-bottom: 0; }
+.financial-summary dt { color: var(--muted); }
+.financial-summary dd { margin: 8px 0 0; font-size: 1.6rem; font-weight: 700; }
+.financial-history { min-width: 0; }
+.payment-list { list-style: none; padding: 0; display: grid; gap: 18px; }
+.payment-list > li { border: 1px solid var(--line); border-radius: 6px; padding: 16px; overflow-wrap: anywhere; }
 .agenda-summary { display: grid; gap: 16px; margin-bottom: 0; }
 .agenda-summary > div { display: grid; grid-template-columns: minmax(150px, 1fr) 3fr; gap: 12px; }
 .agenda-summary dt { font-weight: 700; color: var(--muted); }
@@ -355,6 +370,9 @@ th {
 .weekday { display: flex; align-items: center; gap: 10px; font-weight: 700; }
 
 @media (max-width: 760px) {
+  .dashboard-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-overview .summary-item strong { font-size: 1.25rem; overflow-wrap: anywhere; }
+  .dashboard-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .agenda-summary > div { grid-template-columns: 1fr; gap: 4px; }
   .expediente-row { grid-template-columns: 1fr 1fr; }
   .weekday { grid-column: 1 / -1; }

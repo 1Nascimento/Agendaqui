@@ -32,7 +32,7 @@ export type TokenRecuperacaoComContaRecord = TokenRecuperacaoSenhaRecord & {
 };
 
 export type CriarContaData = {
-  empresaId: string;
+  empresaId: string | null;
   nome: string;
   telefone: string;
   email: string;
@@ -44,9 +44,9 @@ export type CriarContaData = {
 
 export interface ContaRepository {
   findByEmail(email: string): Promise<ContaRecord | null>;
-  findById(id: string, empresaId: string): Promise<ContaRecord | null>;
+  findById(id: string, empresaId: string | null): Promise<ContaRecord | null>;
   createConta(data: CriarContaData): Promise<ContaRecord>;
-  updateConta(id: string, data: Partial<Pick<ContaRecord, "nome" | "telefone" | "email" | "ativo" | "senhaHash">>, empresaId: string): Promise<ContaRecord>;
+  updateConta(id: string, data: Partial<Pick<ContaRecord, "nome" | "telefone" | "email" | "ativo" | "senhaHash">>, empresaId: string | null): Promise<ContaRecord>;
   listContas(filtro: { empresaId: string; perfil?: PerfilConta }): Promise<ContaRecord[]>;
   countActiveByPerfil(perfil: PerfilConta, empresaId: string): Promise<number>;
   createSessao(data: { contaId: string; tokenHash: string; expiraEm: Date }): Promise<SessaoRecord>;
@@ -55,5 +55,5 @@ export interface ContaRepository {
   revokeSessoesByContaId(contaId: string, revogadaEm: Date, empresaId: string): Promise<void>;
   createTokenRecuperacaoSenha(data: { contaId: string; tokenHash: string; expiraEm: Date }): Promise<TokenRecuperacaoSenhaRecord>;
   findTokenRecuperacaoSenha(tokenHash: string): Promise<TokenRecuperacaoComContaRecord | null>;
-  marcarTokenRecuperacaoSenhaUtilizado(id: string, utilizadoEm: Date): Promise<void>;
+  redefinirSenhaAtomica(tokenId: string, senhaHash: string, agora: Date): Promise<boolean>;
 }

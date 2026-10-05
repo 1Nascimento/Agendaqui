@@ -19,7 +19,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <section className="auth-panel">
         <div className="brand">
           <h1>Agendaqui</h1>
-          <p>Entre para acessar sua área de conta.</p>
         </div>
         <Mensagem erro={params?.erro} sucesso={params?.sucesso} />
         <form className="form" action={loginAction}>
